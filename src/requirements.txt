@@ -5,3 +5,4 @@ numpy
 # json
 # chess.svg
 pyserial
+install cairosvg
