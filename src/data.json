@@ -1,0 +1,11 @@
+{
+
+    "record":{
+        "Player_Name" : "nametest",
+        "Date": "Datetest",
+        "Duration" : "Durationtest" ,
+        "result" : "resulttest" ,
+        "matchid" : "matchidtest" ,
+        "PGN" : "PGNtest" 
+    }
+}
