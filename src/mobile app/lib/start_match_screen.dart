@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class StartMatchScreen extends StatefulWidget {
   const StartMatchScreen({Key? key}) : super(key: key);
@@ -88,14 +91,50 @@ class _StartMatchScreenState extends State<StartMatchScreen> {
                     textStyle: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  onPressed: () {
-                    // Insert action for the Start button
+                  onPressed: () async {
+                    if (_nameController.text.isEmpty) {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: Text("Error"),
+                          content: Text("Please enter your name"),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(ctx).pop();
+                              },
+                              child: Text("Okay"),
+                            ),
+                          ],
+                        ),
+                      );
+                      return;
+                    }
+
+                    try {
+                      final response = await http.post(
+                        Uri.parse('http://localhost:5000/start_match'), // Adjust IP as needed for your setup
+                        headers: <String, String>{
+                          'Content-Type': 'application/json; charset=UTF-8',
+                        },
+                        body: jsonEncode(<String, String>{
+                          'username': _nameController.text,
+                        }),
+                      );
+
+                      if (response.statusCode == 200) {
+                        print('Match started successfully');
+                        // Optionally handle navigation or display a success message
+                      } else {
+                        print('Failed to start match: ${response.body}');
+                      }
+                    } catch (e) {
+                      print('Error connecting to the server: $e');
+                    }
                   },
                   child: const Text(
                     'Start',
-                    style: TextStyle(
-                        color:
-                            Colors.white), // Explicitly setting text color here
+                    style: TextStyle(color: Colors.white),
                   ),
                 ),
               ),
