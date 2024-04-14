@@ -8,7 +8,8 @@ import numpy
 from IPython.display import display, SVG
 
 # ########## Methods ##########
-def random_board(max_depth=24):
+def random_board(max_depth=200):
+    # max_depth was 24 and i planing to make 3 datasets opening , mid and end game the opening is first 24 moves
     board = chess.Board()
     depth = random.randrange(0, max_depth)
 
@@ -77,13 +78,14 @@ def split_dims(board):
 
     return board3d
 
-def generate_dataset(size=50, max_depth=24, score_depth=10):
+# the size is the size of dataset wil change it later to 500000 for opening, mid and ending
+# the depth was 10 now it's 0
+def generate_dataset(size=50000, max_depth=24, score_depth=0):
     positions = []
     scores = []
     
     for _ in range(size):
-        
-        print(_)
+        print(_ + 1)
         board = random_board(max_depth=max_depth)
         board_3d = split_dims(board)
         board_score = get_score(board, depth=score_depth)  # Use the renamed function
