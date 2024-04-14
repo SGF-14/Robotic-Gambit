@@ -5,10 +5,15 @@ import chess
 import chess.pgn
 import chess.svg
 from cairosvg import svg2png
-# Flask API
+# Flask API VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import threading
-# connect firebase
+
+
+
+
+# connect firebase vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 import firebase_admin
 from firebase_admin import credentials,initialize_app,db 
 
@@ -27,8 +32,9 @@ ref.set(data)
 print("new db updated")
 
 # firebase_admin.initialize_app(cred)
+# end of Firebase connection ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
+# sqdict file 
 with open('sqdict.json', 'r') as fp:
     sq_points = json.load(fp)
 
@@ -56,6 +62,9 @@ def show_board(board: chess.Board, size=900) -> None:
 
 # START MATCH
 def start_chess_match(username):
+
+
+    print("Test")
     print(f"Starting match for user: {username}")
 
     cap = cv2.VideoCapture(1)  
@@ -143,6 +152,26 @@ def start_chess_match(username):
     show_board(board)
     cap.release()
 
-start_chess_match("username")
+
+
+app = Flask(__name__)
+CORS(app)
+
+@app.route('/start_match', methods=['POST'])
+def start_match():
+    print("flask test")
+    username = request.json.get('username')
+    if not username:
+        return jsonify({'error': 'No username provided'}), 400
+    try:
+        threading.Thread(target=start_chess_match, args=(username,)).start()
+        return jsonify({'message': f'Match started for {username}'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+# start_chess_match("username")
 # Close all windows
 # cv2.destroyAllWindows()
