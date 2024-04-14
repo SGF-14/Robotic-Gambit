@@ -8,3 +8,4 @@ pyserial
 cairosvg
 firebase_admin
 flask
+flask-cors
