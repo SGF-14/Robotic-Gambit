@@ -23,7 +23,7 @@ class SplashScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Image.network(
-                        'https://i.ibb.co/VMxWZPW/logo.png',
+                        'https://i.ibb.co/sbTw6Lm/Gambit.png',
                         errorBuilder: (context, error, stackTrace) {
                           return const Text('Image not found',
                               style: TextStyle(color: Colors.white));

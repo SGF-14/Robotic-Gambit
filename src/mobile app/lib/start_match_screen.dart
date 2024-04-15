@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'match_screen.dart'; // Make sure this import points to where your MatchScreen file is located.
 
 class StartMatchScreen extends StatefulWidget {
   const StartMatchScreen({Key? key}) : super(key: key);
@@ -69,12 +70,16 @@ class _StartMatchScreenState extends State<StartMatchScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 50),
                 child: TextField(
                   controller: _nameController,
+                  style: const TextStyle(color: Colors.black), // Add this line
                   decoration: const InputDecoration(
                     hintText: 'Enter your name',
                     fillColor: Colors.white,
                     filled: true,
                     border: OutlineInputBorder(),
-                    hintStyle: TextStyle(fontSize: 18),
+                    hintStyle: TextStyle(
+                        fontSize: 18,
+                        color: Colors
+                            .black), // And adjust the hintStyle color here if needed
                   ),
                 ),
               ),
@@ -89,14 +94,19 @@ class _StartMatchScreenState extends State<StartMatchScreen> {
                         fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () {
-                    // Insert action for the Start button
+                    final String playerName = _nameController.text;
+                    if (playerName.isNotEmpty) {
+                      Navigator.of(context).push(MaterialPageRoute(
+                          builder: (context) =>
+                              MatchScreen(playerName: playerName)));
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('Please enter your name to start.'),
+                      ));
+                    }
                   },
-                  child: const Text(
-                    'Start',
-                    style: TextStyle(
-                        color:
-                            Colors.white), // Explicitly setting text color here
-                  ),
+                  child: const Text('Start',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 16),

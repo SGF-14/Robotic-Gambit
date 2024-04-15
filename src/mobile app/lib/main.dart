@@ -25,6 +25,13 @@ class MyApp extends StatelessWidget {
       title: 'Robotic Gambit',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        brightness: Brightness.dark,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            onPrimary: Colors.white, // Sets the text color on the button
+            primary: Colors.blue, // The background color of the button
+          ),
+        ),
       ),
       home: SplashScreen(), // Directly navigating to SplashScreen
     );
