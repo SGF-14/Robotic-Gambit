@@ -1,3 +1,4 @@
+# vision_utils.py
 import cv2
 import numpy as np
 import json
@@ -8,13 +9,16 @@ import chess
 with open('app/sqdict.json', 'r') as fp:
     sq_points = json.load(fp)
 
+cap = None
+
 def setup_camera():
-    global cap
-    if 'cap' in globals():
-        if cap.isOpened():
-            cap.release()  # Make sure to release any previously opened resources
+    global cap  
     cap = cv2.VideoCapture(1)
+    if not cap.isOpened():
+        print("Cannot open camera")
+        exit()
     return cap
+
 
 def release_resources():
     global cap
@@ -41,3 +45,6 @@ def show_board(board: chess.Board, size=900):
     svgwrap = chess.svg.board(board, size=size)
     svg2png(svgwrap, write_to='output.png')
     cv2.imshow('Game', cv2.imread('output.png'))
+
+def get_square_points():
+    return sq_points

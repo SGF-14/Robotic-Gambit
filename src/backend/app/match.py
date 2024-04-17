@@ -1,3 +1,4 @@
+# match.py
 import cv2
 import numpy as np
 import json
@@ -5,24 +6,40 @@ import chess
 import chess.pgn
 import chess.svg
 from cairosvg import svg2png
-from .vision_utils import setup_camera, release_resources, find_square, draw_outlines, show_board
 
+# impport Computer Vision utils
+from .vision_utils import setup_camera, release_resources, find_square, draw_outlines, show_board, get_square_points
+
+# import Firebase then database_config
 import firebase_admin
-from firebase_admin import credentials, db, exceptions
+from firebase_admin import db, exceptions
+
+from .database_config import initialize_firebase_app
 
 # Initialize Firebase Admin SDK only once
+# Initialize Firebase only if it hasn't been initialized yet
 if not firebase_admin._apps:
+    initialize_firebase_app()
+            
 
-    cred = credentials.Certificate('app/robotic-gambit-firebase-adminsdk-qoeq8-0e937ad0f9.json')
+def get_database_reference():
+    # Assuming Firebase has been initialized, get a reference to the database
+    return db.reference('some_reference')
 
-    firebase_admin.initialize_app(cred, {
-
-        'databaseURL': 'https://robotic-gambit-default-rtdb.europe-west1.firebasedatabase.app/'
-
-    })
+# Now you can use this in your application logic
+def some_database_interaction():
+    ref = get_database_reference()
+    # Perform operations with ref
 
 # Reference to chess matches in Firebase
 chess_matches_ref = db.reference('chess_matches')
+
+def initialize_matches():
+    active_matches = chess_matches_ref.order_by_child('status').equal_to('active').get()
+    for match_id, match in active_matches.items():
+        if match and 'status' in match and match['status'] == 'active':
+            print(f"Setting match {match_id} to completed.")
+            chess_matches_ref.child(match_id).update({'status': 'completed'})
 
 def can_start_new_match():
     try:
@@ -58,8 +75,9 @@ def complete_chess_match(match_id):
         print(f"Failed to complete the match {match_id}: {e}")
 
 def process_chess_match():
+    sq_points = get_square_points()
     global cap
-    # cap = setup_camera()
+    cap = setup_camera()
     try:
         # cap = cv2.VideoCapture(1)  
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
