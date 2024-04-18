@@ -1,0 +1,11 @@
+python-chess
+chess
+# cv2
+numpy
+# json
+# chess.svg
+pyserial
+cairosvg
+firebase_admin
+flask
+flask-cors
