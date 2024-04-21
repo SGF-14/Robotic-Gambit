@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Ensure you have url_launcher in your pubspec.yaml for launching URLs
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart'; // For using Clipboard
 
 class RecordsScreen extends StatelessWidget {
   const RecordsScreen({Key? key}) : super(key: key);
@@ -32,7 +31,7 @@ class RecordsScreen extends StatelessWidget {
                 height: 150,
                 errorBuilder: (context, error, stackTrace) {
                   return const Text('Image not found',
-                      style: TextStyle(color: Colors.white));
+                      style: TextStyle(color: Colors.white, fontSize: 9));
                 },
               ),
             ),
@@ -41,74 +40,55 @@ class RecordsScreen extends StatelessWidget {
               stream: recordsRef.snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return const Text('Something went wrong');
+                  return const Text('Something went wrong',
+                      style: TextStyle(color: Colors.white, fontSize: 9));
                 }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const CircularProgressIndicator();
                 }
-                return DataTable(
-                  headingRowColor: MaterialStateColor.resolveWith(
-                      (states) => const Color(0xFF2c3237)),
-                  dataRowColor: MaterialStateColor.resolveWith(
-                      (states) => const Color(0xFF1f2327)),
-                  columns: const [
-                    DataColumn(
-                        label: Text('Player',
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 11))),
-                    DataColumn(
-                        label: Text('Date',
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 11))),
-                    DataColumn(
-                        label: Text('Duration',
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 11))),
-                    DataColumn(
-                        label: Text('Result',
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 11))),
-                    DataColumn(
-                        label: Text('MID',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11))), // Abbreviated "MatchID"
-                    DataColumn(
-                        label: Text('PGN',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11))), // Abbreviated "Image"
-                  ],
-                  rows: snapshot.data!.docs
-                      .map<DataRow>((DocumentSnapshot document) {
-                    Map<String, dynamic> data =
-                        document.data()! as Map<String, dynamic>;
-                    return DataRow(
-                      cells: [
-                        DataCell(Text(data['Player'] ?? 'Unknown')),
-                        DataCell(Text(data['Date'] ?? 'N/A')),
-                        DataCell(Text(data['Duration'] ?? 'N/A')),
-                        DataCell(Text(data['Result'] ?? 'N/A')),
-                        DataCell(Text(data['MatchID']?.toString() ?? 'N/A')),
-                        DataCell(
-                          GestureDetector(
-                            onTap: () async {
-                              final url = data['PGN'];
-                              if (await canLaunch(url)) {
-                                await launch(url);
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text('Could not launch $url')),
-                                );
-                              }
-                            },
-                            child: const Icon(Icons.image, color: Colors.white),
-                          ),
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minWidth: constraints.maxWidth),
+                        child: DataTable(
+                          headingRowColor: MaterialStateColor.resolveWith(
+                              (states) => const Color(0xFF2c3237)),
+                          dataRowColor: MaterialStateColor.resolveWith(
+                              (states) => const Color(0xFF1f2327)),
+                          columns: const <DataColumn>[
+                            DataColumn(
+                                label: Text('Player',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 10))),
+                            DataColumn(
+                                label: Text('Date',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 10))),
+                            DataColumn(
+                                label: Text('Duration',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 10))),
+                            DataColumn(
+                                label: Text('Result',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 10))),
+                            DataColumn(
+                                label: Text('MID',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 10))),
+                            DataColumn(
+                                label: Text('PGN',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 10))),
+                          ],
+                          rows: _buildDataRow(snapshot.data!.docs, context),
                         ),
-                      ],
+                      ),
                     );
-                  }).toList(),
+                  },
                 );
               },
             ),
@@ -116,5 +96,47 @@ class RecordsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<DataRow> _buildDataRow(
+      List<DocumentSnapshot> docs, BuildContext context) {
+    return docs.map<DataRow>((DocumentSnapshot document) {
+      Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
+      return DataRow(cells: <DataCell>[
+        DataCell(Text(data['Player'] ?? 'Unknown',
+            style: TextStyle(color: Colors.white, fontSize: 10),
+            textAlign: TextAlign.center)),
+        DataCell(Text(data['Date'] ?? 'N/A',
+            style: TextStyle(color: Colors.white, fontSize: 10),
+            textAlign: TextAlign.center)),
+        DataCell(Text(data['Duration'] ?? 'N/A',
+            style: TextStyle(color: Colors.white, fontSize: 10),
+            textAlign: TextAlign.center)),
+        DataCell(Text(data['Result'] ?? 'N/A',
+            style: TextStyle(color: Colors.white, fontSize: 10),
+            textAlign: TextAlign.center)),
+        DataCell(Text(data['MatchID']?.toString() ?? 'N/A',
+            style: TextStyle(color: Colors.white, fontSize: 10),
+            textAlign: TextAlign.center)),
+        DataCell(
+          Center(
+            child: IconButton(
+              icon: const Icon(Icons.content_copy, color: Colors.white),
+              onPressed: () {
+                Clipboard.setData(
+                    ClipboardData(text: data['PGN']?.toString() ?? 'N/A'));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('PGN copied to clipboard',
+                        style: TextStyle(color: Colors.white, fontSize: 10)),
+                    backgroundColor: Color(0xFF323739),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ]);
+    }).toList();
   }
 }

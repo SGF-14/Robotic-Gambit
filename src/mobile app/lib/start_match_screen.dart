@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
-
+import 'dart:convert';
+import 'match_screen.dart';  
 
 class StartMatchScreen extends StatefulWidget {
   const StartMatchScreen({Key? key}) : super(key: key);
@@ -88,32 +88,19 @@ class _StartMatchScreenState extends State<StartMatchScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2c3237),
                     minimumSize: const Size.fromHeight(60),
-                    textStyle: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () async {
                     if (_nameController.text.isEmpty) {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: Text("Error"),
-                          content: Text("Please enter your name"),
-                          actions: <Widget>[
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(ctx).pop();
-                              },
-                              child: Text("Okay"),
-                            ),
-                          ],
-                        ),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Please enter your name to start.'))
                       );
                       return;
                     }
 
                     try {
                       final response = await http.post(
-                        Uri.parse('http://localhost:5000/start_match'), // Adjust IP as needed for your setup
+                        Uri.parse('https://roboticgambit.ngrok.app/start_match'), // Adjust the URL as needed
                         headers: <String, String>{
                           'Content-Type': 'application/json; charset=UTF-8',
                         },
@@ -123,19 +110,22 @@ class _StartMatchScreenState extends State<StartMatchScreen> {
                       );
 
                       if (response.statusCode == 200) {
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (context) => MatchScreen(playerName: _nameController.text)));
                         print('Match started successfully');
-                        // Optionally handle navigation or display a success message
                       } else {
-                        print('Failed to start match: ${response.body}');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to start match: ${response.body}'))
+                        );
                       }
+
                     } catch (e) {
-                      print('Error connecting to the server: $e');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error connecting to the server: $e'))
+                      );
                     }
                   },
-                  child: const Text(
-                    'Start',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  child: const Text('Start', style: TextStyle(color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 16),
