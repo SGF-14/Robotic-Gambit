@@ -88,10 +88,7 @@ class _MatchScreenState extends State<MatchScreen> {
                   alignment: Alignment.topLeft,
                   child: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () {
-                      _timerRobot.cancel();
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: showSurrenderDialog,
                   ),
                 ),
               ),
@@ -153,8 +150,8 @@ class _MatchScreenState extends State<MatchScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(5)),
                 ),
-                onPressed: () => showSurrenderDialog(),
-                child: Text('Surrender', style: TextStyle(fontSize: 18)),
+                onPressed: () {}, // Button does nothing when pressed
+                child: Text('End Turn', style: TextStyle(fontSize: 18)),
               ),
               const SizedBox(height: 20),
             ],

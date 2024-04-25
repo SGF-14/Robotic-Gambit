@@ -100,7 +100,8 @@ class _StartMatchScreenState extends State<StartMatchScreen> {
 
                     try {
                       final response = await http.post(
-                        Uri.parse('https://roboticgambit.ngrok.app/start_match'), // Adjust the URL as needed
+                        // Uri.parse('https://localhost:5000/start_match'), // local
+                        Uri.parse('https://roboticgambit.ngrok.app/start_match'), // ngrokul
                         headers: <String, String>{
                           'Content-Type': 'application/json; charset=UTF-8',
                         },
@@ -109,17 +110,23 @@ class _StartMatchScreenState extends State<StartMatchScreen> {
                         }),
                       );
 
+                      print('Response status: ${response.statusCode}');
+                      print('Response body: ${response.body}');
+
                       if (response.statusCode == 200) {
+                        print('Match started successfully1');
                         Navigator.of(context).push(MaterialPageRoute(
                             builder: (context) => MatchScreen(playerName: _nameController.text)));
-                        print('Match started successfully');
+                        print('Match started successfully2');
                       } else {
+                        print('Failed to start match: ${response.body}');
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Failed to start match: ${response.body}'))
                         );
                       }
 
                     } catch (e) {
+                      print('Error connecting to the server: $e');
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Error connecting to the server: $e'))
                       );
