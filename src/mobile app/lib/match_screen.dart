@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -26,6 +28,33 @@ class _MatchScreenState extends State<MatchScreen> {
     startTimerRobot();
   }
 
+Future<void> endPlayerTurn() async {
+  try {
+    var url = Uri.parse('https://roboticgambit.ngrok.app/end_turn');
+    var response = await http.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      // Handle response data or update UI accordingly
+      print("Turn ended successfully: ${response.body}");
+    } else {
+      // Error handling
+      print('Failed to end turn with status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      throw Exception('Failed to end turn');
+    }
+  } catch (e) {
+    // Error handling
+    print('Error ending turn: $e');
+  }
+}
+
+
+
   void startTimerRobot() {
     const oneSec = Duration(seconds: 1);
     _startTime = DateTime.now();
@@ -47,27 +76,24 @@ class _MatchScreenState extends State<MatchScreen> {
   }
 
   void endGame(String result) async {
-    _timerRobot.cancel();
+    final response = await http.post(
+      Uri.parse('https://roboticgambit.ngrok.app/complete_chess_match'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'match_id': 'your_match_id_here', 
+      }),
+    );
 
-    DateTime endTime = DateTime.now();
-    Duration gameDuration = endTime.difference(_startTime!);
-    String formattedDuration =
-        "${gameDuration.inMinutes}:${(gameDuration.inSeconds % 60).toString().padLeft(2, '0')}";
-
-    String formattedDate = DateFormat("MM/dd").format(DateTime.now());
-    String matchID = Random().nextInt(900000).toString().padLeft(6, '0');
-
-    FirebaseFirestore firestore = FirebaseFirestore.instance;
-    CollectionReference recordsRef = firestore.collection('records');
-
-    await recordsRef.add({
-      'Date': formattedDate,
-      'Duration': formattedDuration,
-      'MatchID': matchID,
-      'PGN': "Example PGN data",
-      'Player': widget.playerName,
-      'Result': result,
-    });
+    if (response.statusCode == 200) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => SplashScreen()),
+        (Route<dynamic> route) => false,
+      );
+    } else {
+    }
   }
 
   @override
@@ -88,10 +114,7 @@ class _MatchScreenState extends State<MatchScreen> {
                   alignment: Alignment.topLeft,
                   child: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () {
-                      _timerRobot.cancel();
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: showSurrenderDialog,
                   ),
                 ),
               ),
@@ -117,23 +140,33 @@ class _MatchScreenState extends State<MatchScreen> {
                   ],
                 ),
               ),
+
+              // chessboard part
               Container(
                 width: boardSize,
                 height: boardSize,
-                child: GridView.builder(
-                  physics: NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 8),
-                  itemCount: 64,
-                  itemBuilder: (context, index) {
-                    bool isLightSquare = (index ~/ 8) % 2 == index % 2;
-                    return Container(
-                        color: isLightSquare
-                            ? Colors.grey[300]
-                            : Colors.grey[800]);
-                  },
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/styled_chess_board.png'),
+                    fit: BoxFit.cover,
+
+                // child: GridView.builder(
+                //   physics: NeverScrollableScrollPhysics(),
+                //   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                //       crossAxisCount: 8),
+                //   itemCount: 64,
+                //   itemBuilder: (context, index) {
+                //     bool isLightSquare = (index ~/ 8) % 2 == index % 2;
+                //     return Container(
+                //         color: isLightSquare
+                //             ? Colors.grey[300]
+                //             : Colors.grey[800]);
+                
+                  ),
                 ),
               ),
+
+
               SizedBox(
                 width: boardSize,
                 child: Row(
@@ -153,8 +186,8 @@ class _MatchScreenState extends State<MatchScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(5)),
                 ),
-                onPressed: () => showSurrenderDialog(),
-                child: Text('Surrender', style: TextStyle(fontSize: 18)),
+                onPressed: endPlayerTurn,  // Call the function when the button is pressed
+                child: Text('End Turn', style: TextStyle(fontSize: 18)),
               ),
               const SizedBox(height: 20),
             ],
@@ -186,13 +219,7 @@ class _MatchScreenState extends State<MatchScreen> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
               endGame('Lose');
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => SplashScreen()),
-                (Route<dynamic> route) => false,
-              );
             },
             child: Text('Yes, surrender'),
           ),
@@ -200,6 +227,7 @@ class _MatchScreenState extends State<MatchScreen> {
       ),
     );
   }
+
 
   @override
   void dispose() {
