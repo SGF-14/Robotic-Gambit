@@ -17,6 +17,11 @@ dependencies:
   js: ^0.6.3
   url_launcher: ^6.0.12
   intl: ^0.17.0
+  chess: ^0.7.0
+  flutter_chess_board:
+    git:
+      url: https://github.com/deven98/flutter_chess_board.git
+      ref: master
 
 dev_dependencies:
   flutter_test:
@@ -33,3 +38,4 @@ flutter:
 
   assets:
     - assets/logo_gambit.png
+    - assets/styled_chess_board.png
