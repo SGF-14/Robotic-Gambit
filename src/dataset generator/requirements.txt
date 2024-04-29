@@ -1,2 +1,0 @@
-chess
-gdown==4.6.3
