@@ -80,35 +80,41 @@ def show_board(board: chess.Board, size=900):
 
 
 def detect_move(initial, final):
+    print("Detecting move...")
 
+    # Load square points data
     with open('app/sqdict.json', 'r') as fp:
         sq_points = json.load(fp)
 
-
-
+    # Convert images to grayscale
+    print("Converting to grayscale...")
     gray_initial = cv2.cvtColor(initial, cv2.COLOR_BGR2GRAY)
     gray_final = cv2.cvtColor(final, cv2.COLOR_BGR2GRAY)
 
+    # Compute the difference and apply threshold
+    print("Computing difference and applying threshold...")
     diff = cv2.absdiff(gray_initial, gray_final)
-    _, thresh = cv2.threshold(diff, 30, 255, cv2.THRESH_BINARY)  
+    # _, thresh = cv2.threshold(diff, 30, 255, cv2.THRESH_BINARY)
+    _, thresh = cv2.threshold(diff, 50, 255, cv2.THRESH_BINARY)
 
-    kernel = np.ones((5, 5), np.uint8)  
-    thresh = cv2.dilate(thresh, kernel, iterations=4)
-    thresh = cv2.erode(thresh, kernel, iterations=4)
+    # Noise reduction through morphological operations
+    print("Applying morphological operations...")
+    kernel = np.ones((3, 3), np.uint8)
+    thresh = cv2.dilate(thresh, kernel, iterations=2)
+    thresh = cv2.erode(thresh, kernel, iterations=2)
 
+    # Contour detection
+    print("Detecting contours...")
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    print(f"Detected {len(contours)} contours")
 
+    # Contour analysis
     if len(contours) < 2:
-        cv2.imshow("Thresh", thresh)  
-        cv2.waitKey(0)  
-        print("Could not determine both squares.")
+        print("Not enough contours to determine a move.")
         return None
 
-    frame_with_contours = final.copy()
-    cv2.drawContours(frame_with_contours, contours, -1, (0, 255, 0), 3)
-    cv2.imshow("Contours", frame_with_contours)  
-    cv2.waitKey(0)
-
+    # Further processing if contours are sufficient
+    print("Analyzing contours...")
     moves = []
     for contour in sorted(contours, key=cv2.contourArea, reverse=True)[:2]:
         M = cv2.moments(contour)
@@ -120,17 +126,15 @@ def detect_move(initial, final):
                 moves.append(square)
 
     if len(moves) == 2:
+        print(f"Detected move from {moves[0]} to {moves[1]}")
         return moves[0] + moves[1]
     else:
         print("Could not determine both squares.")
         return None
 
 
-    if len(moves) == 2:
-        return moves[0] + moves[1]  
-    else:
-        print("Could not determine both squares.")
-        return None
+
+
 
 def find_square(x: float, y: float, sq_points):
     for square in sq_points:
