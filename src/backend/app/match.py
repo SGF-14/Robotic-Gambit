@@ -95,25 +95,39 @@ def end_turn():
         final_frame = capture_frame()
         if final_frame is None:
             return jsonify({'error': 'Final frame capture failed'}), 400
+        
 
-        print("Initial Frame Captured:", initial_frame)
-        print("Final Frame Captured:", final_frame)
         
         user_move = detect_move(initial_frame, final_frame)
         print("Detected Move:", user_move)
 
-        if user_move and board.is_legal(chess.Move.from_uci(user_move)):
-            board.push_uci(user_move)
+        if user_move:
+            move = chess.Move.from_uci(user_move)
+            from_square, to_square = user_move[:2], user_move[2:]
+            reversed_move = chess.Move.from_uci(to_square + from_square)
+
+            if board.is_legal(move):
+                board.push(move)
+            elif board.is_legal(reversed_move):
+                board.push(reversed_move)
+                print("Reversed move was legal it is : ", reversed_move.uci())
+            else:
+                print("move and reversed moves are illegal.")
+                return jsonify({'error': 'Invalid or illegal move'}), 400
+
             print(board)
             check_game_status()
-            if not board.is_game_over():  # Use the is_game_over() method to check the game status
+            if not board.is_game_over():
                 make_ai_move()
             return jsonify({'message': 'Turn processed successfully'}), 200
         else:
-            return jsonify({'error': 'Invalid or illegal move'}), 400
+            return jsonify({'error': 'No move detected'}), 400
+
     except Exception as e:
         print(f"Error in end_turn: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
 
 
 
