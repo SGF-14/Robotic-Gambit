@@ -29,7 +29,7 @@ from .database_config import initialize_firebase_app
 if not firebase_admin._apps:
     initialize_firebase_app()
             
-board = get_board
+board = get_board()
 
 def get_database_reference():
     
@@ -90,31 +90,45 @@ def end_turn():
     try:
         initial_frame = get_initial_frame()  
         if initial_frame is None:
-            print("Initial frame is not set, cannot proceed with ending turn.")
-            return None, "Initial frame is not set."
+            return jsonify({'error': 'Initial frame is not set'}), 400
 
         final_frame = capture_frame()
         if final_frame is None:
-            print("Final Frame is None")
-            return None, "Final frame capture failed"
+            return jsonify({'error': 'Final frame capture failed'}), 400
+        
 
-        print("Initial Frame Captured:", initial_frame)
-        print("Final Frame Captured:", final_frame)
         
         user_move = detect_move(initial_frame, final_frame)
         print("Detected Move:", user_move)
 
-        if user_move and board.is_legal(chess.Move.from_uci(user_move)):
-            board.push_uci(user_move)
+        if user_move:
+            move = chess.Move.from_uci(user_move)
+            from_square, to_square = user_move[:2], user_move[2:]
+            reversed_move = chess.Move.from_uci(to_square + from_square)
+
+            if board.is_legal(move):
+                board.push(move)
+            elif board.is_legal(reversed_move):
+                board.push(reversed_move)
+                print("Reversed move was legal it is : ", reversed_move.uci())
+            else:
+                print("move and reversed moves are illegal.")
+                return jsonify({'error': 'Invalid or illegal move'}), 400
+
+            print(board)
             check_game_status()
-            if not game_over:
+            if not board.is_game_over():
                 make_ai_move()
-            return "Turn processed successfully", None
+            return jsonify({'message': 'Turn processed successfully'}), 200
         else:
-            return None, 'Invalid or illegal move'
+            return jsonify({'error': 'No move detected'}), 400
+
     except Exception as e:
         print(f"Error in end_turn: {str(e)}")
-        return None, f'Error processing move: {str(e)}'
+        return jsonify({'error': str(e)}), 500
+
+
+
 
 
 
@@ -135,3 +149,7 @@ def check_game_status():
         print("Checkmate detected.")
     elif board.is_stalemate():
         print("Stalemate detected.")
+    elif board.is_insufficient_material():
+        print("Draw due to insufficient material.")
+    elif board.is_game_over():
+        print("Game is over.")

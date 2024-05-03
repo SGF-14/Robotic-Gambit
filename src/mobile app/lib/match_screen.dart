@@ -1,59 +1,114 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as mat;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:intl/intl.dart';
 import 'dart:math';
 import 'splash_screen.dart';
+import 'package:chess/chess.dart' as chess;
+import 'package:flutter_chess_board/flutter_chess_board.dart';
+import 'package:audioplayers/audioplayers.dart';
 
-class MatchScreen extends StatefulWidget {
+class MatchScreen extends mat.StatefulWidget {
   final String playerName;
 
-  const MatchScreen({Key? key, required this.playerName}) : super(key: key);
+  const MatchScreen({mat.Key? key, required this.playerName}) : super(key: key);
 
   @override
   _MatchScreenState createState() => _MatchScreenState();
 }
 
-class _MatchScreenState extends State<MatchScreen> {
+class _MatchScreenState extends mat.State<MatchScreen> {
   late Timer _timerRobot;
   int _startRobot = 600;
   int _startPlayer = 600;
   DateTime? _startTime;
+  ChessBoardController _controller = ChessBoardController();
+  chess.Chess _chessGame = chess.Chess();
+  AudioPlayer audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     startTimerRobot();
+    _controller.game = _chessGame;
+    playStartupSound();
   }
 
-Future<void> endPlayerTurn() async {
-  try {
-    var url = Uri.parse('https://roboticgambit.ngrok.app/end_turn');
-    var response = await http.post(
-      url,
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-    );
+  Future<void> playStartupSound() async {
+    await audioPlayer.play('assets/sounds/game-start.mp3');
 
-    if (response.statusCode == 200) {
-      // Handle response data or update UI accordingly
-      print("Turn ended successfully: ${response.body}");
-    } else {
-      // Error handling
-      print('Failed to end turn with status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      throw Exception('Failed to end turn');
+}
+
+  Future<void> endPlayerTurn() async {
+    try {
+      await audioPlayer.play('assets/sounds/move-self.mp3');
+      var url = Uri.parse('https://roboticgambit.ngrok.app/end_turn');
+      var response = await http.post(
+        url,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        updateBoardFromBackend(); 
+        print("Turn ended successfully: ${response.body}");
+      } else {
+        print('Failed to end turn with status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        showIllegalMoveDialog();
+      }
+    } catch (e) {
+      print('Error ending turn: $e');
+      showIllegalMoveDialog();
     }
-  } catch (e) {
-    // Error handling
-    print('Error ending turn: $e');
+  }
+
+  void showIllegalMoveDialog() {
+  mat.showDialog(
+    context: context,
+    builder: (context) => mat.AlertDialog(
+      title: mat.Text('Illegal Move'),
+      content: mat.Text('Return your pieces to their previous normal position, then press "Ready".'),
+      actions: [
+        mat.TextButton(
+          onPressed: () {
+            mat.Navigator.of(context).pop();
+            initialFrame(); 
+          },
+          child: mat.Text('Ready'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> initialFrame() async {
+  var url = Uri.parse('https://roboticgambit.ngrok.app/initial_frame');
+  var response = await http.post(
+    url,
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    
+    print("recapture Initial frame: ${response.body}");
+  } else {
+    
+    print('Failed to recapture initial frame with code: ${response.statusCode}');
+    print('Response body: ${response.body}');
   }
 }
 
-
+  void updateBoardFromBackend() {
+    String fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    _chessGame.load(fen);
+    setState(() {}); 
+  }
 
   void startTimerRobot() {
     const oneSec = Duration(seconds: 1);
@@ -76,6 +131,7 @@ Future<void> endPlayerTurn() async {
   }
 
   void endGame(String result) async {
+    await audioPlayer.play('assets/sounds/game-end.mp3');
     final response = await http.post(
       Uri.parse('https://roboticgambit.ngrok.app/complete_chess_match'),
       headers: <String, String>{
@@ -87,109 +143,87 @@ Future<void> endPlayerTurn() async {
     );
 
     if (response.statusCode == 200) {
-      Navigator.pushAndRemoveUntil(
+      mat.Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => SplashScreen()),
-        (Route<dynamic> route) => false,
+        mat.MaterialPageRoute(builder: (context) => SplashScreen()),
+        (mat.Route<dynamic> route) => false,
       );
-    } else {
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    double boardSize = MediaQuery.of(context).size.width * 0.8;
-    return WillPopScope(
+  mat.Widget build(mat.BuildContext context) {
+    double boardSize = mat.MediaQuery.of(context).size.width * 0.8;
+    return mat.WillPopScope(
       onWillPop: () async {
         _timerRobot.cancel();
         return true;
       },
-      child: Scaffold(
-        backgroundColor: const Color.fromARGB(255, 31, 35, 39),
-        body: SingleChildScrollView(
-          child: Column(
+      child: mat.Scaffold(
+        backgroundColor: mat.Color.fromARGB(255, 31, 35, 39),
+        body: mat.SingleChildScrollView(
+          child: mat.Column(
             children: [
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+              mat.SafeArea(
+                child: mat.Align(
+                  alignment: mat.Alignment.topLeft,
+                  child: mat.IconButton(
+                    icon: const mat.Icon(mat.Icons.arrow_back, color: mat.Colors.white),
                     onPressed: showSurrenderDialog,
                   ),
                 ),
               ),
-              Center(
-                child: Image.network(
+              mat.Center(
+                child: mat.Image.network(
                   'https://i.ibb.co/VMxWZPW/logo.png',
                   width: 150,
                   height: 150,
-                  errorBuilder: (context, error, stackTrace) => Text(
+                  errorBuilder: (context, error, stackTrace) => mat.Text(
                       'Image not found',
-                      style: TextStyle(color: Colors.white, fontSize: 9)),
+                      style: mat.TextStyle(color: mat.Colors.white, fontSize: 9)),
                 ),
               ),
-              const SizedBox(height: 20),
-              SizedBox(
+              const mat.SizedBox(height: 20),
+              mat.SizedBox(
                 width: boardSize,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: mat.Row(
+                  mainAxisAlignment: mat.MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Robotic Gambit',
-                        style: TextStyle(color: Colors.white, fontSize: 20)),
+                    mat.Text('Robotic Gambit',
+                        style: mat.TextStyle(color: mat.Colors.white, fontSize: 20)),
                     _buildTimerBox(formatTime(_startRobot)),
                   ],
                 ),
               ),
-
-              // chessboard part
-              Container(
-                width: boardSize,
-                height: boardSize,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/styled_chess_board.png'),
-                    fit: BoxFit.cover,
-
-                // child: GridView.builder(
-                //   physics: NeverScrollableScrollPhysics(),
-                //   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                //       crossAxisCount: 8),
-                //   itemCount: 64,
-                //   itemBuilder: (context, index) {
-                //     bool isLightSquare = (index ~/ 8) % 2 == index % 2;
-                //     return Container(
-                //         color: isLightSquare
-                //             ? Colors.grey[300]
-                //             : Colors.grey[800]);
-                
-                  ),
-                ),
+              ChessBoard(
+                controller: _controller,
+                size: boardSize,
+                onMove: () {
+                },
               ),
-
-
-              SizedBox(
+              mat.SizedBox(
                 width: boardSize,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: mat.Row(
+                  mainAxisAlignment: mat.MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(widget.playerName,
-                        style: TextStyle(color: Colors.white, fontSize: 20)),
+                    mat.Text(widget.playerName,
+                        style: mat.TextStyle(color: mat.Colors.white, fontSize: 20)),
                     _buildTimerBox(formatTime(_startPlayer)),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[850],
-                  padding: EdgeInsets.symmetric(horizontal: 60, vertical: 20),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5)),
+              const mat.SizedBox(height: 20),
+              mat.ElevatedButton(
+                style: mat.ElevatedButton.styleFrom(
+                  backgroundColor: mat.Colors.grey[850],
+                  padding: mat.EdgeInsets.symmetric(horizontal: 60, vertical: 20),
+                  shape: mat.RoundedRectangleBorder(
+                      borderRadius: mat.BorderRadius.circular(5)),
                 ),
-                onPressed: endPlayerTurn,  // Call the function when the button is pressed
-                child: Text('End Turn', style: TextStyle(fontSize: 18)),
+                onPressed: endPlayerTurn,
+                child: mat.Text('End Turn', style: mat.TextStyle(fontSize: 18)),
               ),
-              const SizedBox(height: 20),
+              const mat.SizedBox(height: 20),
             ],
           ),
         ),
@@ -197,41 +231,41 @@ Future<void> endPlayerTurn() async {
     );
   }
 
-  Widget _buildTimerBox(String time) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      decoration: BoxDecoration(
-          color: Colors.grey[850], borderRadius: BorderRadius.circular(10)),
-      child: Text(time, style: TextStyle(color: Colors.white, fontSize: 20)),
+  mat.Widget _buildTimerBox(String time) {
+    return mat.Container(
+      padding: mat.EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: mat.BoxDecoration(
+          color: mat.Colors.grey[850], borderRadius: mat.BorderRadius.circular(10)),
+      child: mat.Text(time, style: mat.TextStyle(color: mat.Colors.white, fontSize: 20)),
     );
   }
 
   void showSurrenderDialog() {
-    showDialog(
+    mat.showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Surrender'),
-        content: Text('Are you sure you want to surrender?'),
+      builder: (context) => mat.AlertDialog(
+        title: mat.Text('Surrender'),
+        content: mat.Text('Are you sure you want to surrender?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel'),
+          mat.TextButton(
+            onPressed: () => mat.Navigator.of(context).pop(),
+            child: mat.Text('Cancel'),
           ),
-          TextButton(
+          mat.TextButton(
             onPressed: () {
               endGame('Lose');
             },
-            child: Text('Yes, surrender'),
+            child: mat.Text('Yes, surrender'),
           ),
         ],
       ),
     );
   }
 
-
   @override
   void dispose() {
     _timerRobot.cancel();
+    audioPlayer.dispose();
     super.dispose();
   }
 }
