@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, send_file, make_response
 from .ChessBoard import get_board, get_board_png
 from .match import start_chess_match, end_turn, complete_chess_match
+from .FrameManagement import capture_initial_frame
 
 api_blueprint = Blueprint('api', __name__)
 
@@ -27,6 +28,23 @@ def end_turn_endpoint():
         return jsonify({'message': 'Turn processed successfully'}), 200
     else:
         return jsonify({'error': error}), 400
+
+@api_blueprint.route('/initial_frame', methods=['POST'])
+def initial_frame_endpint():
+    try:
+        capture_initial_frame()  
+        response = {
+            'status': 'success',
+            'message': 'Initial frame set successfully'
+        }
+        return jsonify(response), 200
+
+    except Exception as e:
+        error_response = {
+            'status': 'error',
+            'message': str(e)
+        }
+        return jsonify(error_response), 500
 
 
 @api_blueprint.route('/complete_chess_match', methods=['POST'])
