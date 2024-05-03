@@ -53,22 +53,61 @@ class _MatchScreenState extends mat.State<MatchScreen> {
       );
 
       if (response.statusCode == 200) {
-        updateBoardFromBackend(); // Assume you fetch and update the board state here
+        updateBoardFromBackend(); 
         print("Turn ended successfully: ${response.body}");
       } else {
         print('Failed to end turn with status code: ${response.statusCode}');
         print('Response body: ${response.body}');
-        throw Exception('Failed to end turn');
+        showIllegalMoveDialog();
       }
     } catch (e) {
       print('Error ending turn: $e');
+      showIllegalMoveDialog();
     }
   }
+
+  void showIllegalMoveDialog() {
+  mat.showDialog(
+    context: context,
+    builder: (context) => mat.AlertDialog(
+      title: mat.Text('Illegal Move'),
+      content: mat.Text('Return your pieces to their previous normal position, then press "Ready".'),
+      actions: [
+        mat.TextButton(
+          onPressed: () {
+            mat.Navigator.of(context).pop();
+            initialFrame(); 
+          },
+          child: mat.Text('Ready'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> initialFrame() async {
+  var url = Uri.parse('https://roboticgambit.ngrok.app/initial_frame');
+  var response = await http.post(
+    url,
+    headers: <String, String>{
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    
+    print("recapture Initial frame: ${response.body}");
+  } else {
+    
+    print('Failed to recapture initial frame with code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+  }
+}
 
   void updateBoardFromBackend() {
     String fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     _chessGame.load(fen);
-    setState(() {}); // Force update the UI after changing the game state
+    setState(() {}); 
   }
 
   void startTimerRobot() {
@@ -122,7 +161,6 @@ class _MatchScreenState extends mat.State<MatchScreen> {
       },
       child: mat.Scaffold(
         backgroundColor: mat.Color.fromARGB(255, 31, 35, 39),
-        // backgroundColor: mat.Colors.grey[860],
         body: mat.SingleChildScrollView(
           child: mat.Column(
             children: [
@@ -161,7 +199,6 @@ class _MatchScreenState extends mat.State<MatchScreen> {
                 controller: _controller,
                 size: boardSize,
                 onMove: () {
-                  // Optional: send move to backend
                 },
               ),
               mat.SizedBox(
