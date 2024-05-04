@@ -9,6 +9,7 @@ import 'splash_screen.dart';
 import 'package:chess/chess.dart' as chess;
 import 'package:flutter_chess_board/flutter_chess_board.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:firebase_database/firebase_database.dart' as firebase_db;
 
 class MatchScreen extends mat.StatefulWidget {
   final String playerName;
@@ -28,18 +29,36 @@ class _MatchScreenState extends mat.State<MatchScreen> {
   chess.Chess _chessGame = chess.Chess();
   AudioPlayer audioPlayer = AudioPlayer();
 
+  late firebase_db.DatabaseReference _fenRef;
+
   @override
   void initState() {
     super.initState();
     startTimerRobot();
-    _controller.game = _chessGame;
     playStartupSound();
+    _controller.game = _chessGame;
+
+    _fenRef = firebase_db.FirebaseDatabase.instance.ref('chess_matches/currentGame/fen');
+    _fenRef.onValue.listen((firebase_db.DatabaseEvent event) {
+      if (event.snapshot.exists) {
+        String fen = event.snapshot.value.toString();
+        updateChessBoard(fen);
+      }
+    });
+  }
+
+  void updateChessBoard(String fen) {
+    if (_chessGame.load(fen)) {
+      setState(() {
+        _controller = ChessBoardController();
+        _controller.game = _chessGame;
+      });
+    }
   }
 
   Future<void> playStartupSound() async {
     await audioPlayer.play('assets/sounds/game-start.mp3');
-
-}
+  }
 
   Future<void> endPlayerTurn() async {
     try {
@@ -53,8 +72,15 @@ class _MatchScreenState extends mat.State<MatchScreen> {
       );
 
       if (response.statusCode == 200) {
-        updateBoardFromBackend(); 
         print("Turn ended successfully: ${response.body}");
+
+        // Fetch the latest FEN from the Firebase Realtime Database
+        _fenRef.once().then((firebase_db.DatabaseEvent event) {
+          if (event.snapshot.exists) {
+            String fen = event.snapshot.value.toString();
+            updateChessBoard(fen);
+          }
+        });
       } else {
         print('Failed to end turn with status code: ${response.statusCode}');
         print('Response body: ${response.body}');
@@ -67,47 +93,39 @@ class _MatchScreenState extends mat.State<MatchScreen> {
   }
 
   void showIllegalMoveDialog() {
-  mat.showDialog(
-    context: context,
-    builder: (context) => mat.AlertDialog(
-      title: mat.Text('Illegal Move'),
-      content: mat.Text('Return your pieces to their previous normal position, then press "Ready".'),
-      actions: [
-        mat.TextButton(
-          onPressed: () {
-            mat.Navigator.of(context).pop();
-            initialFrame(); 
-          },
-          child: mat.Text('Ready'),
-        ),
-      ],
-    ),
-  );
-}
-
-Future<void> initialFrame() async {
-  var url = Uri.parse('https://roboticgambit.ngrok.app/initial_frame');
-  var response = await http.post(
-    url,
-    headers: <String, String>{
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
-  );
-
-  if (response.statusCode == 200) {
-    
-    print("recapture Initial frame: ${response.body}");
-  } else {
-    
-    print('Failed to recapture initial frame with code: ${response.statusCode}');
-    print('Response body: ${response.body}');
+    mat.showDialog(
+      context: context,
+      builder: (context) => mat.AlertDialog(
+        title: mat.Text('Illegal Move'),
+        content: mat.Text('Return your pieces to their previous normal position, then press "Ready".'),
+        actions: [
+          mat.TextButton(
+            onPressed: () {
+              mat.Navigator.of(context).pop();
+              initialFrame();
+            },
+            child: mat.Text('Ready'),
+          ),
+        ],
+      ),
+    );
   }
-}
 
-  void updateBoardFromBackend() {
-    String fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    _chessGame.load(fen);
-    setState(() {}); 
+  Future<void> initialFrame() async {
+    var url = Uri.parse('https://roboticgambit.ngrok.app/initial_frame');
+    var response = await http.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      print("Recapture Initial frame: ${response.body}");
+    } else {
+      print('Failed to recapture initial frame with code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+    }
   }
 
   void startTimerRobot() {
@@ -138,7 +156,7 @@ Future<void> initialFrame() async {
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(<String, String>{
-        'match_id': 'your_match_id_here', 
+        'match_id': 'your_match_id_here',
       }),
     );
 
