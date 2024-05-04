@@ -20,7 +20,7 @@ import firebase_admin
 from firebase_admin import db, exceptions
 
 # import ChessBoard
-from .ChessBoard import get_board, reset_board, get_board_png
+from .ChessBoard import get_board, reset_board, get_board_png, update_fen_in_database
 
 from .database_config import initialize_firebase_app
 
@@ -108,9 +108,11 @@ def end_turn():
 
             if board.is_legal(move):
                 board.push(move)
+                update_fen_in_database()
             elif board.is_legal(reversed_move):
                 board.push(reversed_move)
                 print("Reversed move was legal it is : ", reversed_move.uci())
+                update_fen_in_database()
             else:
                 print("move and reversed moves are illegal.")
                 return jsonify({'error': 'Invalid or illegal move'}), 400

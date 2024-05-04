@@ -10,7 +10,7 @@
 import chess.engine
 import chess.svg
 import cairosvg
-from .ChessBoard import get_board, get_board_png
+from .ChessBoard import get_board, get_board_png, update_fen_in_database
 # from .ComputerVision import capture_initial_frame
 # from .ComputerVision import capture_initial_frame
 
@@ -43,7 +43,7 @@ def make_ai_move():
     else:
         print("Game is over, no move made")
         print(board)
-    
+    update_fen_in_database()
     engine.quit()  
 
 
