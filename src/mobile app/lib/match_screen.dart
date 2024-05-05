@@ -42,16 +42,21 @@ class _MatchScreenState extends mat.State<MatchScreen> {
     _fenRef.onValue.listen((firebase_db.DatabaseEvent event) {
       if (event.snapshot.exists) {
         String fen = event.snapshot.value.toString();
+        print("this is fen in match screen: "+fen);
         updateChessBoard(fen);
+      }else{
+        print("didnt change");
       }
     });
   }
 
   void updateChessBoard(String fen) {
+      print("in update method before if(): "+fen);
     if (_chessGame.load(fen)) {
+      print("in update method after if(): "+fen);
       setState(() {
         _controller = ChessBoardController();
-        _controller.game = _chessGame;
+        // _controller.game = _chessGame;
       });
     }
   }
