@@ -1,4 +1,5 @@
 # match.py
+from flask import make_response, jsonify
 import cv2
 import numpy as np
 import json
@@ -7,31 +8,39 @@ import chess.pgn
 import chess.svg
 from cairosvg import svg2png
 
-# impport Computer Vision utils
-from .vision_utils import setup_camera, release_resources, find_square, draw_outlines, show_board, get_square_points
+from .FrameManagement import get_initial_frame, capture_frame, release_resources
 
-# import Firebase then database_config
+# impport Computer Vision utils
+from .ComputerVision import setup_camera, find_square, draw_outlines, show_board, get_square_points, detect_move, capture_initial_frame
+# import AI
+from .MachineLearning import make_ai_move
+
+# import Firebase 
 import firebase_admin
 from firebase_admin import db, exceptions
 
+# import ChessBoard
+from .ChessBoard import get_board, reset_board, get_board_png
+
 from .database_config import initialize_firebase_app
 
-# Initialize Firebase Admin SDK only once
-# Initialize Firebase only if it hasn't been initialized yet
+
+
 if not firebase_admin._apps:
     initialize_firebase_app()
             
+board = get_board
 
 def get_database_reference():
-    # Assuming Firebase has been initialized, get a reference to the database
+    
     return db.reference('some_reference')
 
-# Now you can use this in your application logic
+
 def some_database_interaction():
     ref = get_database_reference()
-    # Perform operations with ref
+    
 
-# Reference to chess matches in Firebase
+
 chess_matches_ref = db.reference('chess_matches')
 
 def initialize_matches():
@@ -44,10 +53,10 @@ def initialize_matches():
 def can_start_new_match():
     try:
         active_match = chess_matches_ref.order_by_child('status').equal_to('active').get()
-        return not bool(active_match)  # True if no active match exists
+        return not bool(active_match)  
     except exceptions.FirebaseError as e:
         print(f"Failed to check active matches: {e}")
-        return False  # Assume a match is active if there's a problem checking
+        return False  
 
 def start_chess_match(username):
     if can_start_new_match():
@@ -57,113 +66,72 @@ def start_chess_match(username):
                 'status': 'active'
             })
             print(f"New chess match started for {username}, Match ID: {new_match.key}")
-            # Add logic to control the robotic arm here
-            setup_camera()
-            process_chess_match()  # Handles the chess match logic and OpenCV operations
+            
+            board = chess.Board()
+            reset_board()
+            make_ai_move()
+            if setup_camera() is None:
+                print("Camera setup failed. Camera features will not be available.")
+
+            # TEMP COMMENT THIS v
+            # setup_camera()
+            # process_chess_match()
+            return "Match Started"
         except exceptions.FirebaseError as e:
             print(f"Failed to start new match: {e}")
+            return f"Failed to start new match: {e}"
     else:
         print("A match is currently active. Please wait until the current match is completed.")
+        return "A match is currently active. Please wait."
+
+
+def end_turn():
+    global board
+    try:
+        initial_frame = get_initial_frame()  
+        if initial_frame is None:
+            print("Initial frame is not set, cannot proceed with ending turn.")
+            return None, "Initial frame is not set."
+
+        final_frame = capture_frame()
+        if final_frame is None:
+            print("Final Frame is None")
+            return None, "Final frame capture failed"
+
+        print("Initial Frame Captured:", initial_frame)
+        print("Final Frame Captured:", final_frame)
+        
+        user_move = detect_move(initial_frame, final_frame)
+        print("Detected Move:", user_move)
+
+        if user_move and board.is_legal(chess.Move.from_uci(user_move)):
+            board.push_uci(user_move)
+            check_game_status()
+            if not game_over:
+                make_ai_move()
+            return "Turn processed successfully", None
+        else:
+            return None, 'Invalid or illegal move'
+    except Exception as e:
+        print(f"Error in end_turn: {str(e)}")
+        return None, f'Error processing move: {str(e)}'
+
+
 
 def complete_chess_match(match_id):
     try:
+        initialize_matches()
         match_ref = chess_matches_ref.child(match_id)
         match_ref.update({'status': 'completed'})
         release_resources()
         print(f"Chess match {match_id} completed.")
+        return "Match completed"
     except exceptions.FirebaseError as e:
         print(f"Failed to complete the match {match_id}: {e}")
+        return f"Failed to complete the match: {e}"
 
-def process_chess_match():
-    sq_points = get_square_points()
-    global cap
-    cap = setup_camera()
-    try:
-        # cap = cv2.VideoCapture(1)  
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        initial = []
-        final = []
-        bounding_boxes = []
-        centers = []
-        highlights = set()
-
-        board = chess.Board()
-        show_board(board)
-        cv2.waitKey(2)
-
-        while not board.is_game_over():
-            ret, frame = cap.read()
-            draw_outlines(sq_points, frame)
-            cv2.imshow('Frame', frame)
-
-            if cv2.waitKey(1) & 0xFF == ord('r'):
-                if len(initial) == 0:
-                    initial = frame
-                    print("Your turn")# CAPTURE THE CORRENT STATUS OF THE BOARD
-                elif len(final) == 0:
-                    print('Enemy  turn !')# CAPTURE THE FINAL  STATUS OF THE BOARD
-                    final = frame
-
-                    gray1 = cv2.cvtColor(initial, cv2.COLOR_BGR2GRAY)
-                    gray2 = cv2.cvtColor(final, cv2.COLOR_BGR2GRAY)
-                    diff = cv2.absdiff(gray1, gray2)
-                    _, diff = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
-
-
-
-
-                    diff = cv2.dilate(diff, None, iterations=4)
-                    kernel_size = 3
-                    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
-                    diff = cv2.erode(diff, kernel, iterations=6)
-
-                    contours, _ = cv2.findContours(diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                    sorted_contours_and_areas = sorted(zip(contours, [cv2.contourArea(c) for c in contours]), key=lambda x: x[1], reverse=True)
-                    try:
-                        contours = [sorted_contours_and_areas[0][0], sorted_contours_and_areas[1][0]]
-                        cv2.drawContours(frame, contours, 1, (255, 0, 0), 4)
-
-                        bounding_boxes = [cv2.boundingRect(c) for c in contours]
-
-                        centers = [(x + w // 2, y + h // 2) for (x, y, w, h) in bounding_boxes]
-                        highlights = set()
-                        for p in centers:
-                            highlights.add(find_square(*p))
-                        initial = []
-                        final = []
-                    except:
-                        highlights = set()
-                        highlights.add('rand')
-                        highlights.add('placeholder')
-                        initial = []
-                        final = []
-
-                    if len(highlights) == 2:
-                        try:
-                            sq1, sq2 = highlights.pop(), highlights.pop()
-                            if board.color_at(chess.parse_square(sq1)) == board.turn:
-                                start, end = sq1, sq2
-                            else:
-                                start, end = sq2, sq1
-                            uci = start + end
-                            board.push_uci(uci)
-                        except:
-                            uci = input("Couldn't record proper move. Override: ")
-                            board.push_uci(uci)
-                        show_board(board)
-                        highlights = set()
-                        centers = []
-
-            if cv2.waitKey(2) & 0xFF == ord('q'):
-                break
-
-            cv2.imshow('Frame', frame)
-
-            show_board(board)
-    finally:
-        if cap:
-            cap.release()
-            print("Camera released")
-        # cap.release()
+def check_game_status():
+    if board.is_checkmate():
+        print("Checkmate detected.")
+    elif board.is_stalemate():
+        print("Stalemate detected.")
