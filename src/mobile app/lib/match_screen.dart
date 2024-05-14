@@ -28,6 +28,7 @@ class _MatchScreenState extends mat.State<MatchScreen> {
   ChessBoardController _controller = ChessBoardController();
   chess.Chess _chessGame = chess.Chess();
   AudioPlayer audioPlayer = AudioPlayer();
+  String _fen = ''; // Initial FEN
 
   late firebase_db.DatabaseReference _fenRef;
 
@@ -36,29 +37,31 @@ class _MatchScreenState extends mat.State<MatchScreen> {
     super.initState();
     startTimerRobot();
     playStartupSound();
-    _controller.game = _chessGame;
+    // _controller.loadFen(_fen); // Load the initial FEN
 
     _fenRef = firebase_db.FirebaseDatabase.instance.ref('chess_matches/currentGame/fen');
+    // Set up listener for FEN changes
     _fenRef.onValue.listen((firebase_db.DatabaseEvent event) {
       if (event.snapshot.exists) {
-        String fen = event.snapshot.value.toString();
-        print("this is fen in match screen: "+fen);
-        updateChessBoard(fen);
-      }else{
-        print("didnt change");
+        String newFen = event.snapshot.value.toString();
+        setState(() {
+          _fen = newFen;
+          _controller.loadFen(_fen);
+        });
+        print("FEN received in match screen: " + newFen);
+      } else {
+        print("No FEN change detected.");
       }
     });
   }
 
-  void updateChessBoard(String fen) {
-      print("in update method before if(): "+fen);
-    if (_chessGame.load(fen)) {
-      print("in update method after if(): "+fen);
-      setState(() {
-        _controller = ChessBoardController();
-        // _controller.game = _chessGame;
-      });
-    }
+  void handleServerMove(String newFen) {
+    setState(() {
+      _fen = newFen;
+      _controller.loadFen(_fen);
+      _chessGame.load(_fen);
+    });
+    startPlayerTimer();
   }
 
   Future<void> playStartupSound() async {
@@ -74,18 +77,15 @@ class _MatchScreenState extends mat.State<MatchScreen> {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
+        body: jsonEncode(<String, String>{
+          'fen': _fen,
+        }),
       );
 
       if (response.statusCode == 200) {
         print("Turn ended successfully: ${response.body}");
-
-        // Fetch the latest FEN from the Firebase Realtime Database
-        _fenRef.once().then((firebase_db.DatabaseEvent event) {
-          if (event.snapshot.exists) {
-            String fen = event.snapshot.value.toString();
-            updateChessBoard(fen);
-          }
-        });
+        String newFen = response.body;
+        handleServerMove(newFen);
       } else {
         print('Failed to end turn with status code: ${response.statusCode}');
         print('Response body: ${response.body}');
@@ -95,6 +95,22 @@ class _MatchScreenState extends mat.State<MatchScreen> {
       print('Error ending turn: $e');
       showIllegalMoveDialog();
     }
+  }
+
+  void startPlayerTimer() {
+    const oneSec = Duration(seconds: 1);
+    _startTime = DateTime.now();
+    _timerRobot.cancel(); // Cancel the robot's timer
+    _timerRobot = Timer.periodic(oneSec, (Timer timer) {
+      if (_startPlayer < 1) {
+        timer.cancel();
+        // Handle player's time running out
+      } else {
+        setState(() {
+          _startPlayer--;
+        });
+      }
+    });
   }
 
   void showIllegalMoveDialog() {
@@ -155,13 +171,15 @@ class _MatchScreenState extends mat.State<MatchScreen> {
 
   void endGame(String result) async {
     await audioPlayer.play('assets/sounds/game-end.mp3');
+    final random = Random();
+    final matchId = (random.nextInt(9000) + 1000).toString();
     final response = await http.post(
       Uri.parse('https://roboticgambit.ngrok.app/complete_chess_match'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(<String, String>{
-        'match_id': 'your_match_id_here',
+        'match_id': matchId,
       }),
     );
 
@@ -221,8 +239,7 @@ class _MatchScreenState extends mat.State<MatchScreen> {
               ChessBoard(
                 controller: _controller,
                 size: boardSize,
-                onMove: () {
-                },
+                onMove: () {},
               ),
               mat.SizedBox(
                 width: boardSize,
