@@ -21,7 +21,8 @@ class MatchScreen extends mat.StatefulWidget {
 }
 
 class _MatchScreenState extends mat.State<MatchScreen> {
-  late Timer _timerRobot;
+  Timer? _timerRobot;
+  Timer? _timerPlayer;
   int _startRobot = 600;
   int _startPlayer = 600;
   DateTime? _startTime;
@@ -37,18 +38,13 @@ class _MatchScreenState extends mat.State<MatchScreen> {
     super.initState();
     startTimerRobot();
     playStartupSound();
-    // _controller.loadFen(_fen); // Load the initial FEN
 
     _fenRef = firebase_db.FirebaseDatabase.instance.ref('chess_matches/currentGame/fen');
     // Set up listener for FEN changes
     _fenRef.onValue.listen((firebase_db.DatabaseEvent event) {
       if (event.snapshot.exists) {
         String newFen = event.snapshot.value.toString();
-        setState(() {
-          _fen = newFen;
-          _controller.loadFen(_fen);
-        });
-        print("FEN received in match screen: " + newFen);
+        handleServerMove(newFen);
       } else {
         print("No FEN change detected.");
       }
@@ -56,12 +52,13 @@ class _MatchScreenState extends mat.State<MatchScreen> {
   }
 
   void handleServerMove(String newFen) {
+    if (!mounted) return; // Ensure the widget is still mounted
     setState(() {
       _fen = newFen;
       _controller.loadFen(_fen);
       _chessGame.load(_fen);
     });
-    startPlayerTimer();
+    switchTimers();
   }
 
   Future<void> playStartupSound() async {
@@ -97,11 +94,23 @@ class _MatchScreenState extends mat.State<MatchScreen> {
     }
   }
 
+  void switchTimers() {
+    if (_timerRobot != null && _timerRobot!.isActive) {
+      _timerRobot!.cancel();
+      startPlayerTimer();
+    } else if (_timerPlayer != null && _timerPlayer!.isActive) {
+      _timerPlayer!.cancel();
+      startTimerRobot();
+    }
+  }
+
   void startPlayerTimer() {
     const oneSec = Duration(seconds: 1);
-    _startTime = DateTime.now();
-    _timerRobot.cancel(); // Cancel the robot's timer
-    _timerRobot = Timer.periodic(oneSec, (Timer timer) {
+    _timerPlayer = Timer.periodic(oneSec, (Timer timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_startPlayer < 1) {
         timer.cancel();
         // Handle player's time running out
@@ -111,6 +120,53 @@ class _MatchScreenState extends mat.State<MatchScreen> {
         });
       }
     });
+  }
+
+  void startTimerRobot() {
+    const oneSec = Duration(seconds: 1);
+    _timerRobot = Timer.periodic(oneSec, (Timer timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_startRobot < 1) {
+        timer.cancel();
+        // Handle robot's time running out
+      } else {
+        setState(() {
+          _startRobot--;
+        });
+      }
+    });
+  }
+
+  String formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
+  void endGame(String result) async {
+    await audioPlayer.play('assets/sounds/game-end.mp3');
+    final random = Random();
+    final matchId = (random.nextInt(9000) + 1000).toString();
+    final response = await http.post(
+      Uri.parse('https://roboticgambit.ngrok.app/complete_chess_match'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'match_id': matchId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      mat.Navigator.pushAndRemoveUntil(
+        context,
+        mat.MaterialPageRoute(builder: (context) => SplashScreen()),
+        (mat.Route<dynamic> route) => false,
+      );
+    }
   }
 
   void showIllegalMoveDialog() {
@@ -149,55 +205,13 @@ class _MatchScreenState extends mat.State<MatchScreen> {
     }
   }
 
-  void startTimerRobot() {
-    const oneSec = Duration(seconds: 1);
-    _startTime = DateTime.now();
-    _timerRobot = Timer.periodic(oneSec, (Timer timer) {
-      if (_startRobot < 1) {
-        timer.cancel();
-      } else {
-        setState(() {
-          _startRobot--;
-        });
-      }
-    });
-  }
-
-  String formatTime(int seconds) {
-    final minutes = seconds ~/ 60;
-    final remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
-
-  void endGame(String result) async {
-    await audioPlayer.play('assets/sounds/game-end.mp3');
-    final random = Random();
-    final matchId = (random.nextInt(9000) + 1000).toString();
-    final response = await http.post(
-      Uri.parse('https://roboticgambit.ngrok.app/complete_chess_match'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{
-        'match_id': matchId,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      mat.Navigator.pushAndRemoveUntil(
-        context,
-        mat.MaterialPageRoute(builder: (context) => SplashScreen()),
-        (mat.Route<dynamic> route) => false,
-      );
-    }
-  }
-
   @override
   mat.Widget build(mat.BuildContext context) {
     double boardSize = mat.MediaQuery.of(context).size.width * 0.8;
     return mat.WillPopScope(
       onWillPop: () async {
-        _timerRobot.cancel();
+        _timerRobot?.cancel();
+        _timerPlayer?.cancel();
         return true;
       },
       child: mat.Scaffold(
@@ -230,7 +244,7 @@ class _MatchScreenState extends mat.State<MatchScreen> {
                 child: mat.Row(
                   mainAxisAlignment: mat.MainAxisAlignment.spaceBetween,
                   children: [
-                    mat.Text('Robotic Gambit',
+                    mat.Text(widget.playerName,
                         style: mat.TextStyle(color: mat.Colors.white, fontSize: 20)),
                     _buildTimerBox(formatTime(_startRobot)),
                   ],
@@ -246,7 +260,7 @@ class _MatchScreenState extends mat.State<MatchScreen> {
                 child: mat.Row(
                   mainAxisAlignment: mat.MainAxisAlignment.spaceBetween,
                   children: [
-                    mat.Text(widget.playerName,
+                    mat.Text('Robotic Gambit',
                         style: mat.TextStyle(color: mat.Colors.white, fontSize: 20)),
                     _buildTimerBox(formatTime(_startPlayer)),
                   ],
@@ -276,7 +290,7 @@ class _MatchScreenState extends mat.State<MatchScreen> {
       padding: mat.EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       decoration: mat.BoxDecoration(
           color: mat.Colors.grey[850], borderRadius: mat.BorderRadius.circular(10)),
-      child: mat.Text(time, style: mat.TextStyle(color: mat.Colors.white, fontSize: 20)),
+      child: mat.Text(time, style: mat.TextStyle(color: mat.Colors.white, fontSize: 24)),
     );
   }
 
@@ -288,14 +302,17 @@ class _MatchScreenState extends mat.State<MatchScreen> {
         content: mat.Text('Are you sure you want to surrender?'),
         actions: [
           mat.TextButton(
-            onPressed: () => mat.Navigator.of(context).pop(),
-            child: mat.Text('Cancel'),
+            onPressed: () {
+              mat.Navigator.of(context).pop();
+            },
+            child: mat.Text('No'),
           ),
           mat.TextButton(
             onPressed: () {
-              endGame('Lose');
+              endGame('Player surrendered');
+              mat.Navigator.of(context).pop();
             },
-            child: mat.Text('Yes, surrender'),
+            child: mat.Text('Yes'),
           ),
         ],
       ),
@@ -304,7 +321,8 @@ class _MatchScreenState extends mat.State<MatchScreen> {
 
   @override
   void dispose() {
-    _timerRobot.cancel();
+    _timerRobot?.cancel();
+    _timerPlayer?.cancel();
     audioPlayer.dispose();
     super.dispose();
   }
