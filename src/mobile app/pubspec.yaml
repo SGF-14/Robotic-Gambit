@@ -20,6 +20,7 @@ dependencies:
   chess: ^0.7.0
   flutter_chess_board: ^1.0.1
   audioplayers: ^0.20.1
+  firebase_database: ^10.5.4
 
 dev_dependencies:
   flutter_test:

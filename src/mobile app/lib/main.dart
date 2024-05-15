@@ -8,6 +8,7 @@ void main() async {
     options: FirebaseOptions(
         apiKey: "AIzaSyCptp914bSATMuZUd-5Y_aXgV8e1QpujPM", // Your apiKey
         authDomain: "robotic-gambit.firebaseapp.com", // Your authDomain
+        databaseURL: "https://robotic-gambit-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "robotic-gambit", // Your projectId
         storageBucket: "robotic-gambit.appspot.com", // Your storageBucket
         messagingSenderId: "737950787363", // Your messagingSenderId
