@@ -7,21 +7,20 @@
 #### King Abdulziz University (KAU), KSA
 ![chess version](https://img.shields.io/badge/chess-1.10.0-blue)
 ![TensorFlow version](https://img.shields.io/badge/TensorFlow-2.9.1-orange)
-![Flask version](https://img.shields.io/badge/Flask-3.0.2-blue)
 ![OpenCV version](https://img.shields.io/badge/OpenCV-4.8.1.78-green)
+![Flask version](https://img.shields.io/badge/Flask-3.0.2-white)
+![Flutter SDK](https://img.shields.io/badge/Flutter%20SDK-3.1.2%20%3C%204.0.0-blue?logo=flutter)
 
 <p align="center">
     <img src="https://i.imgur.com/s9Hj2Wl.png" width="350" height="350">
 </p>
-
-
 
 ## 📢 Latest Updates
 - 📦 Code and datasets coming soon! 🚀
 ---
 
 ## 	♟️ Overview
-Robotic Gambit will involve programming the robotic arm's movements and interactions with the chessboard, using computer vision and Machine learning techniques to enable the AI to learn chess games and make informed decisions. The AI's performance will be enhanced through continuous learning and optimization
+**Robotic Gambit** combines robotics, computer vision, and machine learning to revolutionize chess play. The project features a robotic arm programmed to interact with a physical chessboard, using advanced computer vision to detect and respond to changes in real-time. At its core, an AI leverages deep learning to improve its chess strategies and gameplay.
 
 ---
 
@@ -29,10 +28,18 @@ Robotic Gambit will involve programming the robotic arm's movements and interact
 
 the convolutional neural network contain many layers and end with fully connected layer
 which is the normal neural network, it start with input layer normally it take 2D diminutions
-input in our case we take the input as 3D diminutions, then it go to the convolutional layer
-and moving the filter to the right then multiply and sum the values based on the padding
-space, then using max pooling to get the biggest value only then finally in the final layer using
-flatten operation to make it a victor and being ready to used with fully connected layer
+input in our case we take the input as 3D diminutions.
+
+<p align="center">
+    <img src="https://i.imgur.com/nX86gCH.png" width="550">
+</p>
+
+then it go to the convolutional layer and moving the filter to the right then multiply and sum the values based on the padding space, then using max pooling to get the biggest value only then finally in the final layer using flatten operation to make it a victor and being ready to used with fully connected layer.
+
+<p align="center">
+    <img src="https://i.imgur.com/1xVNh0E.png" width="550">
+</p>
+
 
 ### CNN layers of this project :
 
@@ -49,7 +56,7 @@ flatten operation to make it a victor and being ready to used with fully connect
 
 ### The model and dataset
 
-| Model            | Google Colab Link                                 |
+| File            | Link                                 |
 |-----------------------------------------------------|----------------------------------------------------------------------|
 | CNN   | [![Run in Colab](https://img.shields.io/badge/Google%20Colab-Run%20in%20Colab-orange?logo=googlecolab)](https://colab.research.google.com/drive/?) |
 | Saved Model | [![Google Drive](https://img.shields.io/badge/Google%20Drive-Download%20Model-blue?logo=googledrive)](https://drive.google.com/file/d/your_model_id/?) |
@@ -58,4 +65,19 @@ flatten operation to make it a victor and being ready to used with fully connect
 
 ---
 
+## 🕹️ Simulation
 
+In the above scenario, the camera records the state of the chess game and uses it as input. After that, this data is sent to an Arduino device. The primary laptop that contains the core processing routines receives the information from the Arduino, which serves as an intermediary. With the required algorithms installed, the laptop calculates the best course of action for the robotic arm. The laptop notifies the Arduino of the chosen motion after the calculation is finished.
+
+
+<p align="center">
+  <img src="https://i.imgur.com/qZDbA6Q.gif" alt="Simulation" width="550"> 
+</p>
+
+The Arduino thereafter acts as a bridge to send the output to the robotic arm. Lastly, using the data it has analyzed, the robotic arm carries out the command. This complex system combines computational decision-making, physical robotic movement, and real-time image processing to enable an automated and interactive chess playing experience.
+
+---
+
+<p align="right">
+  <img src="https://i.imgur.com/MguHxIC.png" alt="KAU" width="350"> 
+</p>
