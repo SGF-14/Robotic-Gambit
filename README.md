@@ -92,7 +92,3 @@ In the above scenario, the camera records the state of the chess game and uses i
 The Arduino thereafter acts as a bridge to send the output to the robotic arm. Lastly, using the data it has analyzed, the robotic arm carries out the command. This complex system combines computational decision-making, physical robotic movement, and real-time image processing to enable an automated and interactive chess playing experience.
 
 ---
-
-<p align="right">
-  <img src="https://i.imgur.com/MguHxIC.png" alt="KAU" width="350"> 
-</p>
