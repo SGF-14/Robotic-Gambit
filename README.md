@@ -4,7 +4,7 @@
 </p>
 
 #### [Abdulqadir Alssaggaff](https://www.linkedin.com/in/abdulqadir-alssaggaff-049899285/), [Wadie Shibli](https://www.linkedin.com/in/wadie-shibli/), [Ammar Alharbi](), and [Ahmed Alssaggaff](https://www.linkedin.com/in/ahmed-hussien-alsaggaf/) Supervisor [Dr.Raed Abdulbasit Alsini](https://www.kau.edu.sa/CVEn.aspx?Site_ID=0014414&Lng=EN)
-#### King Abdulziz University (KAU), KSA
+
 ![chess version](https://img.shields.io/badge/chess-1.10.0-blue)
 ![TensorFlow version](https://img.shields.io/badge/TensorFlow-2.9.1-orange)
 ![OpenCV version](https://img.shields.io/badge/OpenCV-4.8.1.78-green)
