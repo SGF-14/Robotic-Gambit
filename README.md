@@ -69,13 +69,13 @@ then it go to the convolutional layer and moving the filter to the right then mu
 In the project, we take two different frames the grayscale of first frame and final frame, then get the difference using absdiff to find the move with multiple filters ( Threshold, Dilated, Eroded), then locate all changed frames with filters above using Contours.
 
 <p align="center">
-  <img src="https://i.imgur.com/3QUXi5P.png" alt="Simulation" width="550"> 
+  <img src="https://i.imgur.com/djNN7CR.png" alt="Simulation" width="550"> 
 </p>
 
 Finally, with located square board, the pointPolygonTest will return true if any change is located in the squares, otherwise return false.
 
 <p align="center">
-  <img src="https://i.imgur.com/JD4HgDr.png" alt="Simulation" width="550"> 
+  <img src="https://i.imgur.com/lSdeyFY.png" alt="Simulation" width="550"> 
 </p>
 
 ---
