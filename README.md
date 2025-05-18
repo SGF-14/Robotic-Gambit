@@ -59,7 +59,7 @@ then it go to the convolutional layer and moving the filter to the right then mu
 | File            | Link                                 |
 |-----------------------------------------------------|----------------------------------------------------------------------|
 | CNN   | [![Run in Colab](https://img.shields.io/badge/Google%20Colab-Run%20in%20Colab-orange?logo=googlecolab)](https://colab.research.google.com/drive/?) |
-| Saved Model | [![Google Drive](https://img.shields.io/badge/Google%20Drive-Download%20Model-blue?logo=googledrive)](https://drive.google.com/file/d/your_model_id/?) |
+| Saved Model | [![Google Drive](https://img.shields.io/badge/Google%20Drive-Download%20Model-blue?logo=googledrive)](https://drive.google.com/file/d/modelgambitnameforlater/?) |
 | Data Set | [![Google Drive](https://img.shields.io/badge/Google%20Drive-Access%20Dataset-blue?logo=googledrive)](https://drive.google.com/drive/folders/?) |
 
 
