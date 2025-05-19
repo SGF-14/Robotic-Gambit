@@ -16,7 +16,7 @@
 </p>
 
 ## 📢 Latest Updates
-- 📦 Code and datasets coming soon! 🚀
+- 📦 model and datasets coming soon! 🚀
 ---
 
 ## 	♟️ Overview
